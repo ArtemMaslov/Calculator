@@ -8,25 +8,15 @@
 #include "..\..\MParser\MParser.h"
 
 
-struct Token
+enum MathParserError
 {
-    Token* next;
-    Token* prev;
-    MathExpression value;
+    MP_NO_ERRORS  = 0,
+    MP_ERR_MEMORY = 1 << 0,
+    MP_ERR_SYNTAX = 1 << 1
 };
 
-struct MathParser
-{
-    Token* tokens;
-    size_t tokenCount;
-};
 
-const size_t minTokenSize = 100;
-const double tokenScale = 2;
-
-bool ParseMathTree(Text* text, MathTree* problem);
-
-bool ReadTreeFromFile(MathTree* problem, Text* text, FILE* file);
+bool ReadTreeFromFile(MathTree* tree, FILE* file);
 
 void WriteTreeToFile(MathTree* problem, FILE* file);
 

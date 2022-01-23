@@ -6,43 +6,50 @@
 #include "..\MathExpression\MathExpression.h"
 
 
-/// Включает построение графа по базе данных.
+/// Р’РєР»СЋС‡Р°РµС‚ РїРѕСЃС‚СЂРѕРµРЅРёРµ РіСЂР°С„Р° РїРѕ Р±Р°Р·Рµ РґР°РЅРЅС‹С….
 #define GRAPHVIZ
 
-/// Обычно используются не более трёх переменных (x, y, z).
+/// РћР±С‹С‡РЅРѕ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РЅРµ Р±РѕР»РµРµ С‚СЂС‘С… РїРµСЂРµРјРµРЅРЅС‹С… (x, y, z).
 const size_t MATH_AVERAGE_VAR_COUNT = 3;
 
-/// Если в дереве будет обнаружено переменных больше, чем MATH_AVERAGE_VAR_COUNT,
-/// то размер массивов будет увеличен в MATH_VAR_COUNT_SCALE раз
+/// Р•СЃР»Рё РІ РґРµСЂРµРІРµ Р±СѓРґРµС‚ РѕР±РЅР°СЂСѓР¶РµРЅРѕ РїРµСЂРµРјРµРЅРЅС‹С… Р±РѕР»СЊС€Рµ, С‡РµРј MATH_AVERAGE_VAR_COUNT,
+/// С‚Рѕ СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІРѕРІ Р±СѓРґРµС‚ СѓРІРµР»РёС‡РµРЅ РІ MATH_VAR_COUNT_SCALE СЂР°Р·
 const size_t MATH_VAR_COUNT_SCALE   = 2;
 
 struct MathNode
 {
-    /// Значение узла.
+    /// Р—РЅР°С‡РµРЅРёРµ СѓР·Р»Р°.
     MathExpression expression;
-    /// Родитель узла.
+    /// Р РѕРґРёС‚РµР»СЊ СѓР·Р»Р°.
     MathNode* parent;
-    /// Левый потомок.
+    /// Р›РµРІС‹Р№ РїРѕС‚РѕРјРѕРє.
     MathNode* nodeLeft;
-    /// Правый потомок.
+    /// РџСЂР°РІС‹Р№ РїРѕС‚РѕРјРѕРє.
     MathNode* nodeRight;
-    /// Количество потомков у поддерева
+    /// РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕС‚РѕРјРєРѕРІ Сѓ РїРѕРґРґРµСЂРµРІР°
     size_t    childCount;
 };
 
 struct MathTree
 {
-    /// Корень дерева.
+    /// РљРѕСЂРµРЅСЊ РґРµСЂРµРІР°.
     MathNode* root;
-    /// Наибольшее количество узлов дерева в глубину, чтобы изменить нужно вызвать TreeMeasure().
+    /// РќР°РёР±РѕР»СЊС€РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СѓР·Р»РѕРІ РґРµСЂРµРІР° РІ РіР»СѓР±РёРЅСѓ, С‡С‚РѕР±С‹ РёР·РјРµРЅРёС‚СЊ РЅСѓР¶РЅРѕ РІС‹Р·РІР°С‚СЊ TreeMeasure().
     size_t treeLength;
 
-    /// Переменные, используемые в дереве
-    char*   variables;
-    /// Значения переменных, используемых в дереве
+    /// РџРµСЂРµРјРµРЅРЅС‹Рµ, РёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РІ РґРµСЂРµРІРµ.
+    const char**   variables;
+    /// Р—РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅС‹С…, РёСЃРїРѕР»СЊР·СѓРµРјС‹С… РІ РґРµСЂРµРІРµ.
     double* values;
-    /// Количество переменных, используемых в дереве
+    /// РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂРµРјРµРЅРЅС‹С…, РёСЃРїРѕР»СЊР·СѓРµРјС‹С… РІ РґРµСЂРµРІРµ.
     size_t  varCapacity;
+
+    /// Р•СЃР»Рё true, С‚Рѕ РґР»СЏ РєР°Р¶РґРѕРіРѕ СѓР·Р»Р° РїР°РјСЏС‚СЊ Р±С‹Р»Р° Р·Р°РєР°Р·Р°РЅР° РѕС‚РґРµР»СЊРЅРѕ. Р•СЃР»Рё false, С‚Рѕ root - СЌС‚Рѕ РјР°СЃСЃРёРІ СѓР·Р»РѕРІ.
+    bool    allocatedSeparately;
+    /// РЈРєР°Р·Р°С‚РµР»СЊ РЅР° РЅР°С‡Р°Р»Рѕ РјР°СЃСЃРёРІР° СѓР·Р»РѕРІ, РµСЃР»Рё allocatedSeparately == false.
+    MathNode* nodesArrayPtr;
+    /// Р Р°Р·РјРµСЂ РјР°СЃСЃРёРІР°
+    size_t nodesArraySize;
 };
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
@@ -65,67 +72,67 @@ void TreeAddLeftNode(MathNode* parent, MathNode* child);
 
 size_t TreeMeasure(MathNode* node);
 
-MathNode* TreeCopyRecursive(MathNode* nodeSrc);
+MathNode* TreeCopyRecursive(const MathNode* nodeSrc);
 
-bool IsLeaf(MathNode* node);
+bool IsLeaf(const MathNode* node);
 
-bool CompareTrees(MathNode* node1, MathNode* node2);
+bool CompareTrees(const MathNode* node1, const MathNode* node2);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-MathNode* TreeFindObject(MathNode* node, MathExpression object);
+MathNode* TreeFindObject(MathNode* node, const MathExpression object);
 
-MathNode* TreeFindObjectStack(MathNode* node, MathExpression object, Stack* stk);
+MathNode* TreeFindObjectStack(MathNode* node, const MathExpression object, Stack* stk);
 
-MathNode* GetNodeFromStack(Stack* stk, size_t index);
+MathNode* GetNodeFromStack(const Stack* stk, const size_t index);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
 bool TreeFindVariables(MathTree* problem);
 
-bool TreeFindVariable(MathTree* problem, char variable);
+bool TreeFindVariable(const MathTree* problem, const char* variable);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-double TreeCalculate(MathTree* problem);
+double TreeCalculate(const MathTree* problem);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
 /**
- * @brief      Оптимизирует дерево, выполняя все оптимизации
- *             (см в MathTree.h функции MathTreeOptimize<X>, где <X> - вид оптимизации)
- * @param tree Указатель на дерево
+ * @brief      РћРїС‚РёРјРёР·РёСЂСѓРµС‚ РґРµСЂРµРІРѕ, РІС‹РїРѕР»РЅСЏСЏ РІСЃРµ РѕРїС‚РёРјРёР·Р°С†РёРё
+ *             (СЃРј РІ MathTree.h С„СѓРЅРєС†РёРё MathTreeOptimize<X>, РіРґРµ <X> - РІРёРґ РѕРїС‚РёРјРёР·Р°С†РёРё)
+ * @param tree РЈРєР°Р·Р°С‚РµР»СЊ РЅР° РґРµСЂРµРІРѕ
 */
 void MathTreeOptimize(MathTree* problem);
 
 /**
- * @brief      Оптимизирует узлы, которые можно вычислить. Например: (4+8)*9 -> 108; sin(Pi/6) -> 0.5;
- *             Тригонометрические функции вычисляются в радианах!
- * @param node Узел, который нужно оптимизировать.
- * @return     true, если была оптимизация. false, если дерево оптимизировать нельзя.
+ * @brief      РћРїС‚РёРјРёР·РёСЂСѓРµС‚ СѓР·Р»С‹, РєРѕС‚РѕСЂС‹Рµ РјРѕР¶РЅРѕ РІС‹С‡РёСЃР»РёС‚СЊ. РќР°РїСЂРёРјРµСЂ: (4+8)*9 -> 108; sin(Pi/6) -> 0.5;
+ *             РўСЂРёРіРѕРЅРѕРјРµС‚СЂРёС‡РµСЃРєРёРµ С„СѓРЅРєС†РёРё РІС‹С‡РёСЃР»СЏСЋС‚СЃСЏ РІ СЂР°РґРёР°РЅР°С…!
+ * @param node РЈР·РµР», РєРѕС‚РѕСЂС‹Р№ РЅСѓР¶РЅРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ.
+ * @return     true, РµСЃР»Рё Р±С‹Р»Р° РѕРїС‚РёРјРёР·Р°С†РёСЏ. false, РµСЃР»Рё РґРµСЂРµРІРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ РЅРµР»СЊР·СЏ.
 */
 bool MathTreeOptimizeCalculatedNodes(MathNode* node);
 
 /**
- * @brief      Оптимизирует узлы, которые можно сократить. Например: x*1 -> x; x^0 -> 1;
- *             Для корректной работы данной оптимизации первоначально выполнить 
+ * @brief      РћРїС‚РёРјРёР·РёСЂСѓРµС‚ СѓР·Р»С‹, РєРѕС‚РѕСЂС‹Рµ РјРѕР¶РЅРѕ СЃРѕРєСЂР°С‚РёС‚СЊ. РќР°РїСЂРёРјРµСЂ: x*1 -> x; x^0 -> 1;
+ *             Р”Р»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹ РґР°РЅРЅРѕР№ РѕРїС‚РёРјРёР·Р°С†РёРё РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕ РІС‹РїРѕР»РЅРёС‚СЊ 
  *             while (OptimizeCalculatedNodes(node) == true);
- * @param node Узел, который нужно оптимизировать.
- * @return     true, если была оптимизация. false, если дерево оптимизировать нельзя.
+ * @param node РЈР·РµР», РєРѕС‚РѕСЂС‹Р№ РЅСѓР¶РЅРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ.
+ * @return     true, РµСЃР»Рё Р±С‹Р»Р° РѕРїС‚РёРјРёР·Р°С†РёСЏ. false, РµСЃР»Рё РґРµСЂРµРІРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ РЅРµР»СЊР·СЏ.
 */
 bool OptimizeWorthlessNodes(MathNode* node);
 
 /**
- * @brief      Оптимизирует поддеревья, которые можно сократить. Например (обозначим за A - поддерево): A-A -> 0; A/A -> 1;
- *             Для корректной работы данной оптимизации первоначально выполнить
- *             while (OptimizeCalculatedNodes(node) == true); и 
+ * @brief      РћРїС‚РёРјРёР·РёСЂСѓРµС‚ РїРѕРґРґРµСЂРµРІСЊСЏ, РєРѕС‚РѕСЂС‹Рµ РјРѕР¶РЅРѕ СЃРѕРєСЂР°С‚РёС‚СЊ. РќР°РїСЂРёРјРµСЂ (РѕР±РѕР·РЅР°С‡РёРј Р·Р° A - РїРѕРґРґРµСЂРµРІРѕ): A-A -> 0; A/A -> 1;
+ *             Р”Р»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹ РґР°РЅРЅРѕР№ РѕРїС‚РёРјРёР·Р°С†РёРё РїРµСЂРІРѕРЅР°С‡Р°Р»СЊРЅРѕ РІС‹РїРѕР»РЅРёС‚СЊ
+ *             while (OptimizeCalculatedNodes(node) == true); Рё 
  *             while (OptimizeWorthlessNodes(node) == true);
- * @param node Узел, который нужно оптимизировать.
- * @return     true, если была оптимизация. false, если дерево оптимизировать нельзя.
+ * @param node РЈР·РµР», РєРѕС‚РѕСЂС‹Р№ РЅСѓР¶РЅРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ.
+ * @return     true, РµСЃР»Рё Р±С‹Р»Р° РѕРїС‚РёРјРёР·Р°С†РёСЏ. false, РµСЃР»Рё РґРµСЂРµРІРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°С‚СЊ РЅРµР»СЊР·СЏ.
 */
 bool OptimizeWorthlessTrees(MathNode* node);
 
@@ -136,9 +143,12 @@ bool OptimizeWorthlessTrees(MathNode* node);
 
 bool CreateTreeGraph(const char* outImagefileName, MathNode* node, bool openFile = false);
 
+void CreateNodeGraph(FILE* file, MathNode* node, size_t parentId, bool IsRight);
+
 #else
 
 #define CreateTreeGraph(fileName, tree) false;
+#define CreateNodeGraph(file, node, parentId, IsRight) false;
 
 #endif
 

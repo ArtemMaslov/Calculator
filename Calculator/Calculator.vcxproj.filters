@@ -39,9 +39,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Math\MathExpression\MathDSL.h">
-      <Filter>Math\MathExpression</Filter>
-    </ClInclude>
     <ClInclude Include="..\Math\MathExpression\MathExpression.h">
       <Filter>Math\MathExpression</Filter>
     </ClInclude>
@@ -72,6 +69,9 @@
     <ClInclude Include="..\StackLibrary\StackDiagnostic.h">
       <Filter>StackLibrary</Filter>
     </ClInclude>
+    <ClInclude Include="..\Math\MathParser\Lexer.h">
+      <Filter>Math\MathParser</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Math\MathExpression\MathExpression.cpp">
@@ -92,9 +92,6 @@
     <ClCompile Include="Calculator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Math\MathParser\RecursiveParser.cpp">
-      <Filter>Math\MathParser</Filter>
-    </ClCompile>
     <ClCompile Include="..\Math\MathParser\Lexer.cpp">
       <Filter>Math\MathParser</Filter>
     </ClCompile>
@@ -110,5 +107,10 @@
     <ClCompile Include="..\StackLibrary\StackDiagnostic.cpp">
       <Filter>StackLibrary</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Math\MathExpression\MathDSL.inc">
+      <Filter>Math\MathExpression</Filter>
+    </Text>
   </ItemGroup>
 </Project>

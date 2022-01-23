@@ -31,6 +31,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -84,10 +85,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AssemblerOutput>NoListing</AssemblerOutput>
+      <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,9 +143,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Logs\Logs.h" />
-    <ClInclude Include="..\Math\MathExpression\MathDSL.h" />
+    <Text Include="..\Math\MathExpression\MathDSL.inc">
+      <FileType>Document</FileType>
+    </Text>
     <ClInclude Include="..\Math\MathExpression\MathExpression.h" />
     <ClInclude Include="..\Math\MathExpression\UndefMathDSL.h" />
+    <ClInclude Include="..\Math\MathParser\Lexer.h" />
     <ClInclude Include="..\Math\MathParser\MathParser.h" />
     <ClInclude Include="..\Math\MathTree\MathTree.h" />
     <ClInclude Include="..\MParser\MParser.h" />
@@ -156,7 +162,6 @@
     <ClCompile Include="..\Math\MathExpression\MathExpression.cpp" />
     <ClCompile Include="..\Math\MathParser\Lexer.cpp" />
     <ClCompile Include="..\Math\MathParser\MathParser.cpp" />
-    <ClCompile Include="..\Math\MathParser\RecursiveParser.cpp" />
     <ClCompile Include="..\Math\MathTree\MathTree.cpp" />
     <ClCompile Include="..\MParser\MParser.cpp" />
     <ClCompile Include="..\StackLibrary\StackLite.cpp" />

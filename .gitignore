@@ -31,15 +31,10 @@
 *.out
 *.app
 
-
-*.vs/Differentiator*
-*/Debug/*
-Debug/*
-x64/*
-out.txt
-
-*.aux
-/Latex/*.log
-/Latex/*.pdf
-*.gz
-*.toc
+.vs
+Debug
+Release
+Akinator/Debug
+Akinator/Release
+x86
+x64
