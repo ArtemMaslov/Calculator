@@ -36,15 +36,19 @@ enum MathOperator
     ME_MULTIPLICATION = 2,
     ME_DIVISION       = 3,
     ME_POWER          = 4,
+    ME_L_PARENTHESIS  = 5,
+    ME_R_PARENTHESIS  = 6,
 };
 
-const char MathOperatorNames[][2] =
+const char MathOperatorNames[] =
 {
-    "+",
-    "-",
-    "*",
-    "/",
-    "^",
+    '+',
+    '-',
+    '*',
+    '/',
+    '^',
+    '(',
+    ')'
 };
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
@@ -113,7 +117,7 @@ struct MathExpression
     {
         double       me_number;
         MathOperator me_operator;
-        char         me_variable;
+        char*        me_variable;
         MathConstant me_constant;
         MathFunction me_function;
     };
@@ -122,7 +126,6 @@ struct MathExpression
 
 enum MathExpressionError
 {
-    ME_ERR_NOT_ENOUGHT_MEMORY = 1<<0,
     ME_ERR_DIVISION_BY_ZERO   = 1<<1,
 };
 
@@ -132,11 +135,9 @@ enum MathExpressionError
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-bool MathExpressionParseString(MathExpression* expr, const char* ptr, const size_t count);
+bool MathExpressionEqual(const MathExpression* expr1, const MathExpression* expr2);
 
-bool MathExpressionEqual(MathExpression* expr1, MathExpression* expr2);
-
-void PrintMathExpression(MathExpression* expr, FILE* file);
+void PrintMathExpression(const MathExpression* expr, FILE* file);
 
 
 #endif

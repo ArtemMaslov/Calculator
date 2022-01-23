@@ -10,18 +10,18 @@
 #include "MathTree.h"
 #include "..\..\Logs\Logs.h"
 
-#include "..\MathExpression\MathDSL.h"
+#include "..\MathExpression\MathDSL.inc"
 
 #define CALC(node) CalculateNode(node, problem, canCalculate)
 
 
-static bool TreeNodeFindVariables(MathNode* node, MathTree* problem);
+static bool TreeNodeFindVariables(const MathNode* node, MathTree* problem);
 
-static double CalculateNode(MathNode* node, MathTree* problem, bool* canCalculate);
+static double CalculateNode(const MathNode* node, const MathTree* problem, bool* canCalculate);
 
-static bool TreeAddVariable(MathTree* problem, char variable);
+static bool TreeAddVariable(MathTree* problem, const char* variable);
 
-static void OptimizeNodeToNumber(MathNode* node, double number);
+static void OptimizeNodeToNumber(MathNode* node, const double number);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
@@ -31,28 +31,34 @@ static void OptimizeNodeToNumber(MathNode* node, double number);
 
 bool TreeConstructor(MathTree* problem)
 {
-    LogLine("Вызван TreeConstructor()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("Вызван TreeConstructor()");
+
     assert(problem);
 
-    problem->root = nullptr;
+    problem->root                = nullptr;
+    problem->treeLength          = 0;
+    
+    problem->nodesArrayPtr       = nullptr;
+    problem->nodesArraySize      = 0;
+    problem->allocatedSeparately = true;
 
-    problem->varCapacity  = MATH_AVERAGE_VAR_COUNT;
-    problem->variables = (char*)calloc(problem->varCapacity, sizeof(char));
-    problem->values    = (double*)calloc(problem->varCapacity, sizeof(double));
+    problem->varCapacity         = MATH_AVERAGE_VAR_COUNT;
+    problem->variables           = (const char**)calloc(problem->varCapacity, sizeof(const char*));
+    problem->values              = (double*)calloc(problem->varCapacity, sizeof(double));
 
     return true;
 }
 
 MathNode* TreeNodeConstructor(const MathExpression* expression)
 {
-    LogLine("Вызван TreeNodeConstructor()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("Вызван TreeNodeConstructor()");
     //assert(expression);
 
     MathNode* node = (MathNode*)calloc(1, sizeof(MathNode));
 
     if (!node)
     {
-        LogLine("NodeConstructor: не хватает памяти для создания нового узла", LOG_ERROR, true);
+        LOG_MATH_TREE_ERR("NodeConstructor: не хватает памяти для создания нового узла");
         return nullptr;
     }
 
@@ -67,12 +73,20 @@ MathNode* TreeNodeConstructor(const MathExpression* expression)
 
 bool TreeDestructor(MathTree* problem) 
 {
-    LogLine("Вызван TreeDestructor()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("Вызван TreeDestructor()");
+
     // assert(problem);
     
     if (problem)
     {
-        TreeNodeDestructor(problem->root);
+        if (problem->allocatedSeparately)
+        {
+            free(problem->nodesArrayPtr);
+        }
+        else
+        {
+            TreeNodeDestructor(problem->root);
+        }
 
         free(problem->values);
         free(problem->variables);
@@ -83,7 +97,7 @@ bool TreeDestructor(MathTree* problem)
 
 bool TreeNodeDestructor(MathNode* node)
 {
-    LogLine("Вызван TreeNodeDestructor()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("Вызван TreeNodeDestructor()");
     // assert(node);
 
     if (node)
@@ -106,7 +120,6 @@ bool TreeNodeDestructor(MathNode* node)
 
 void TreeAddLeftNode(MathNode* parent, MathNode* child)
 {
-    LogLine("Вызван TreeAddLeftNode()", LOG_DEBUG);
     assert(parent);
     assert(child);
 
@@ -116,7 +129,6 @@ void TreeAddLeftNode(MathNode* parent, MathNode* child)
 
 void TreeAddRightNode(MathNode* parent, MathNode* child)
 {
-    LogLine("Вызван TreeAddRightNode()", LOG_DEBUG);
     assert(parent);
     assert(child);
 
@@ -126,6 +138,8 @@ void TreeAddRightNode(MathNode* parent, MathNode* child)
 
 size_t TreeMeasure(MathNode* node)
 {
+    LOG_MATH_TREE_DBG("TreeMeasure");
+
     assert(node);
 
     size_t result = 1;
@@ -151,8 +165,10 @@ size_t TreeMeasure(MathNode* node)
  * @param nodeParentDst Указатель, куда надо скопировать дерево.
  * @return              false в случае ошибки, true в случае успеха.
 */
-MathNode* TreeCopyRecursive(MathNode* nodeSrc)
+MathNode* TreeCopyRecursive(const MathNode* nodeSrc)
 {
+    LOG_MATH_TREE_DBG("TreeCopyRecursive");
+
     assert(nodeSrc);
 
     MathNode* node = TreeNodeConstructor(&nodeSrc->expression);
@@ -182,7 +198,7 @@ MathNode* TreeCopyRecursive(MathNode* nodeSrc)
 
 #undef CHECK_NODE
 
-bool IsLeaf(MathNode* node)
+bool IsLeaf(const MathNode* node)
 {
     assert(node);
 
@@ -198,8 +214,10 @@ bool IsLeaf(MathNode* node)
  * @param node2 Второе поддерево.
  * @return      true, если поддеревья равны.
 */
-bool CompareTrees(MathNode* node1, MathNode* node2)
+bool CompareTrees(const MathNode* node1, const MathNode* node2)
 {
+    LOG_MATH_TREE_DBG("CompareTrees");
+
     assert(node1);
     assert(node2);
 
@@ -227,9 +245,10 @@ bool CompareTrees(MathNode* node1, MathNode* node2)
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-MathNode* TreeFindObject(MathNode* node, MathExpression object)
+MathNode* TreeFindObject(MathNode* node, const MathExpression object)
 {
-    LogLine("Вызван TreeFindObject()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("TreeFindObject");
+
     assert(node);
     assert(node);
     
@@ -247,9 +266,10 @@ MathNode* TreeFindObject(MathNode* node, MathExpression object)
     return result;
 }
 
-MathNode* TreeFindObjectStack(MathNode* node, MathExpression object, Stack* stk)
+MathNode* TreeFindObjectStack(MathNode* node, const MathExpression object, Stack* stk)
 {
-    LogLine("Вызван TreeFindObjectStack()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("TreeFindeObjectStack");
+
     assert(stk);
     assert(node);
 
@@ -272,9 +292,10 @@ MathNode* TreeFindObjectStack(MathNode* node, MathExpression object, Stack* stk)
     return result;
 }
 
-MathNode* GetNodeFromStack(Stack* stk, size_t index)
+MathNode* GetNodeFromStack(const Stack* stk, const size_t index)
 {
-    LogLine("Вызван GetNodeFromStack()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("GetNodeFromStack");
+
     assert(stk);
 
     MathNode** nodeptr = (MathNode**)StackGetElemAt(stk, index);
@@ -293,12 +314,14 @@ MathNode* GetNodeFromStack(Stack* stk, size_t index)
 
 bool TreeFindVariables(MathTree* problem)
 {
+    LOG_MATH_TREE_DBG("TreeFindVariables");
+
     assert(problem);
 
     return TreeNodeFindVariables(problem->root, problem);
 }
 
-static bool TreeNodeFindVariables(MathNode* node, MathTree* problem)
+static bool TreeNodeFindVariables(const MathNode* node, MathTree* problem)
 {
     assert(node);
     assert(problem);
@@ -320,7 +343,7 @@ static bool TreeNodeFindVariables(MathNode* node, MathTree* problem)
     return res;
 }
 
-bool TreeFindVariable(MathTree* problem, char variable)
+bool TreeFindVariable(const MathTree* problem, const char* variable)
 {
     assert(problem);
 
@@ -333,14 +356,14 @@ bool TreeFindVariable(MathTree* problem, char variable)
     return false;
 }
 
-static bool TreeAddVariable(MathTree* problem, char variable)
+static bool TreeAddVariable(MathTree* problem, const char* variable)
 {
     assert(problem);
 
     size_t index = 0;
     for (; index < problem->varCapacity; index++)
     {
-        if (problem->variables[index] == '\0')
+        if (problem->variables[index] == nullptr)
             break;
     }
 
@@ -351,7 +374,7 @@ static bool TreeAddVariable(MathTree* problem, char variable)
 
         if (!newVar || !newVal)
         {
-            LogLine("Ошибка выделения памяти.", LOG_ERROR, true);
+            LOG_MATH_TREE_ERR("Ошибка выделения памяти.");
             free(newVar);
             free(newVal);
             return false;
@@ -359,6 +382,7 @@ static bool TreeAddVariable(MathTree* problem, char variable)
     }
 
     problem->variables[index] = variable;
+
     return true;
 }
 
@@ -368,14 +392,16 @@ static bool TreeAddVariable(MathTree* problem, char variable)
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-double TreeCalculate(MathTree* problem)
+double TreeCalculate(const MathTree* problem)
 {
+    LOG_MATH_TREE_DBG("TreeCalculate");
+
     assert(problem);
 
     return CalculateNode(problem->root, problem, nullptr);
 }
 
-static double CalculateNode(MathNode* node, MathTree* problem, bool* canCalculate)
+static double CalculateNode(const MathNode* node, const MathTree* problem, bool* canCalculate)
 {
     assert(node);
     //assert(tree);
@@ -401,7 +427,7 @@ static double CalculateNode(MathNode* node, MathTree* problem, bool* canCalculat
         case ME_VARIABLE:
             if (problem)
             {
-                for (int st = 0; st < problem->varCapacity; st++)
+                for (size_t st = 0; st < problem->varCapacity; st++)
                 {
                     if (problem->variables[st] == node->expression.me_variable)
                     {
@@ -516,6 +542,8 @@ static void OptimizeNodeToNumber(MathNode* node, double number)
 */
 void MathTreeOptimize(MathNode* problem)
 {
+    LOG_MATH_TREE_DBG("MathTreeOptimize");
+
     assert(problem);
 
     bool result = false;
@@ -644,7 +672,7 @@ bool OptimizeWorthlessNodes(MathNode* node)
                 }
                 else if (TYPE_EQUAL(RIGHT, ME_NUMBER) && GET_NUM(RIGHT) == 0)
                 {
-                    LogLine("Внимание! В выражении выполнено деление на 0.", LOG_ERROR, true);
+                    LOG_MATH_TREE_ERR("Внимание! В выражении выполнено деление на 0.");
                     return false;
                 }
                 else if (TYPE_EQUAL(RIGHT, ME_NUMBER) && GET_NUM(RIGHT) == 1)
@@ -669,7 +697,7 @@ bool OptimizeWorthlessNodes(MathNode* node)
                 }
                 else if (TYPE_EQUAL(LEFT, ME_NUMBER) && GET_NUM(LEFT) == 0 && TYPE_EQUAL(RIGHT, ME_NUMBER) && GET_NUM(RIGHT) == 0)
                 {
-                    LogLine("Внимание! Выражение 0^0 лишено смысла. Вычисление выражения будет прервано", LOG_ERROR, true);
+                    LOG_MATH_TREE_ERR("Выражение 0^0 лишено смысла. Вычисление выражения будет прервано");
                     return false;
                 }
                 else if (TYPE_EQUAL(RIGHT, ME_NUMBER) && GET_NUM(RIGHT) == 0 || 
@@ -760,11 +788,10 @@ bool OptimizeWorthlessTrees(MathNode* node)
 
 #ifdef GRAPHVIZ
 
-static void CreateNodeGraph(FILE* file, MathNode* node, size_t parentId, bool IsRight);
-
 bool CreateTreeGraph(const char* outImagefileName, MathNode* node, bool openFile)
 {
-    LogLine("Вызван CreateTreeGraph()", LOG_DEBUG);
+    LOG_MATH_TREE_DBG("CreateTreeGraph");
+
     assert(outImagefileName);
     assert(node);
 
@@ -772,7 +799,7 @@ bool CreateTreeGraph(const char* outImagefileName, MathNode* node, bool openFile
 
     if (!file)
     {
-        LogLine("CreateTreeGraph: ошибка открытия файла.", LOG_ERROR, true);
+        LOG_MATH_TREE_ERR("CreateTreeGraph: ошибка открытия файла.");
         return false;
     }
     CreateGraphCallCount++;
@@ -796,14 +823,16 @@ bool CreateTreeGraph(const char* outImagefileName, MathNode* node, bool openFile
     remove("treeGraph.gv");
 
     if (openFile)
-        system(outImagefileName);
+    {
+        sprintf(cmd, "%s%d.png", outImagefileName, CreateGraphCallCount);
+        system(cmd);
+    }
 
     return true;
 }
 
-static void CreateNodeGraph(FILE* file, MathNode* node, size_t parentId, bool IsRight)
+void CreateNodeGraph(FILE* file, MathNode* node, size_t parentId, bool IsRight)
 {
-    LogLine("Вызван CreateNodeGraph()", LOG_DEBUG);
     assert(file);
     assert(node);
 

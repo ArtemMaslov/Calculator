@@ -37,12 +37,19 @@ struct MathTree
     /// Наибольшее количество узлов дерева в глубину, чтобы изменить нужно вызвать TreeMeasure().
     size_t treeLength;
 
-    /// Переменные, используемые в дереве
-    char*   variables;
-    /// Значения переменных, используемых в дереве
+    /// Переменные, используемые в дереве.
+    const char**   variables;
+    /// Значения переменных, используемых в дереве.
     double* values;
-    /// Количество переменных, используемых в дереве
+    /// Количество переменных, используемых в дереве.
     size_t  varCapacity;
+
+    /// Если true, то для каждого узла память была заказана отдельно. Если false, то root - это массив узлов.
+    bool    allocatedSeparately;
+    /// Указатель на начало массива узлов, если allocatedSeparately == false.
+    MathNode* nodesArrayPtr;
+    /// Размер массива
+    size_t nodesArraySize;
 };
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
@@ -65,32 +72,32 @@ void TreeAddLeftNode(MathNode* parent, MathNode* child);
 
 size_t TreeMeasure(MathNode* node);
 
-MathNode* TreeCopyRecursive(MathNode* nodeSrc);
+MathNode* TreeCopyRecursive(const MathNode* nodeSrc);
 
-bool IsLeaf(MathNode* node);
+bool IsLeaf(const MathNode* node);
 
-bool CompareTrees(MathNode* node1, MathNode* node2);
+bool CompareTrees(const MathNode* node1, const MathNode* node2);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-MathNode* TreeFindObject(MathNode* node, MathExpression object);
+MathNode* TreeFindObject(MathNode* node, const MathExpression object);
 
-MathNode* TreeFindObjectStack(MathNode* node, MathExpression object, Stack* stk);
+MathNode* TreeFindObjectStack(MathNode* node, const MathExpression object, Stack* stk);
 
-MathNode* GetNodeFromStack(Stack* stk, size_t index);
+MathNode* GetNodeFromStack(const Stack* stk, const size_t index);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
 bool TreeFindVariables(MathTree* problem);
 
-bool TreeFindVariable(MathTree* problem, char variable);
+bool TreeFindVariable(const MathTree* problem, const char* variable);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 
-double TreeCalculate(MathTree* problem);
+double TreeCalculate(const MathTree* problem);
 
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
 ///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
@@ -136,9 +143,12 @@ bool OptimizeWorthlessTrees(MathNode* node);
 
 bool CreateTreeGraph(const char* outImagefileName, MathNode* node, bool openFile = false);
 
+void CreateNodeGraph(FILE* file, MathNode* node, size_t parentId, bool IsRight);
+
 #else
 
 #define CreateTreeGraph(fileName, tree) false;
+#define CreateNodeGraph(file, node, parentId, IsRight) false;
 
 #endif
 

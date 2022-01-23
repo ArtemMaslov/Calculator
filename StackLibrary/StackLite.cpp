@@ -7,146 +7,80 @@
 
 #include "..\Logs\Logs.h"
 #include "StackLite.h"
-#include "StackProtection.h"
-#include "StackDiagnostic.h"
 
-
-#ifdef  STACK_LOGS
-
-FILE* stackLogFile = nullptr;
-
-#endif //  StackLogs
 
 static Stack* StackResize(Stack *stack, int *error);
 
-static size_t CalculateDecreasedCapacity(size_t oldCapacity, size_t stackSize, bool* shouldResize);
+static size_t CalculateDecreasedCapacity(const size_t oldCapacity, const size_t stackSize, bool* shouldResize);
 
-void StackLogConstructor(FILE* file)
+
+int StackConstructor(Stack *stack, const size_t elementSize, const size_t Capacity)
 {
-    LogConstructor("Stack.log", "StackLibrary");
-}
+    LOG_STACK_DBG("StackConstructor");
 
+    assert(stack);
 
-int StackConstructor(Stack *stack, size_t elementSize, size_t Capacity)
-{
-#ifdef STACK_LOGS
-    assert(stackLogFile);
+    int error = STK_NO_ERRORS;
 
-    LogLine(stackLogFile, "StackConstructor", DEBUG);
-#endif
-
-    if (stack == nullptr)
+    stack->elementSize   = elementSize;
+    stack->stackCapacity = Capacity;
+    stack->stackSize     = 0;
+    
+    if (stack->stackCapacity > 0)
     {
-#ifdef STACK_LOG_ERRORS
-        LogLine(stackLogFile, "ERROR: Stack ptr is null", ERROR);
-#endif
-        StackDump(stack, stackLogFile);
-        return STACKERR_PTR_IS_NULL;
-    }
+        stack->stackCapacity = (StackMinCapacity > stack->stackCapacity) ? StackMinCapacity : stack->stackCapacity;
+        stack->data = calloc(stack->stackCapacity, stack->elementSize);
 
-    int error = 0;
-    error |= IsStackEmpty(stack);
-    error |= (elementSize > 0) ? STACKERR_NO_ERRORS : STACKERR_ELEM_SIZE_INVALIDE;
-
-    if (error == STACKERR_NO_ERRORS)
-    {
-        stack->elementSize   = elementSize;
-        stack->stackCapacity = Capacity;
-        stack->stackSize     = 0;
-        
-        if (stack->stackCapacity > 0)
+        if (!stack->data)
         {
-            stack->stackCapacity = (stack->stackCapacity < STACK_MIN_CAPACITY) ? STACK_MIN_CAPACITY : stack->stackCapacity;
-            stack->data = calloc(Capacity, stack->elementSize * Capacity);
+            LOG_STACK_ERR_MEMORY;
+            error |= STK_ERR_MEMORY;
         }
     }
-    else
-        StackDump(stack, stackLogFile);
 
     return error;
 }
 
-int StackDestructor(Stack *stack)
+void StackDestructor(Stack *stack)
 {
-#ifdef STACK_LOGS
-    LogLine(stackLogFile, "StackDestructor", DEBUG);
-#endif
+    LOG_STACK_DBG("StackDestructor");
 
-    if (stack == nullptr)
-    {
-#ifdef STACK_LOG_ERRORS
-        LogLine(stackLogFile, "ERROR: Stack ptr is null", ERROR);
-#endif
-        StackDump(stack, stackLogFile);
-        return STACKERR_PTR_IS_NULL;
-    }
+    assert(stack);
 
     if (stack->data)
         free((char*)stack->data - sizeof(int64_t));
     
     memset(stack, 0, sizeof(Stack));
-
-    return STACKERR_NO_ERRORS;
 }
 
-int StackPush(Stack *stack, void *expression)
+int StackPush(Stack *stack, void *data)
 {
-#ifdef STACK_LOGS
-    LogLine(stackLogFile, "StackPush", DEBUG);
-#endif
+    LOG_STACK_DBG("StackPush");
+    
+    assert(stack);
+    assert(data);
 
-    int error = ValidateStack(stack);
-
-    if (expression == nullptr)
-    {
-#ifdef STACK_LOG_ERRORS
-    LogLine(stackLogFile, "ERROR: Trying to push null value", ERROR);
-#endif
-        StackDump(stack, stackLogFile);
-        return STACKERR_NULL_VALUE;
-    }
-
-    if (IsStackBroken(error, stack))
-        return error;
+    int error = STK_NO_ERRORS;
 
     stack = StackResize(stack, &error);
 
-    if (stack)
-    {
-        memmove((char*)stack->data + stack->elementSize * stack->stackSize++, expression, stack->elementSize);
-    }
-
-    error |= ValidateStack(stack);
-
-    if (error > 0)
-        StackDump(stack, stackLogFile);
+    memmove((char*)stack->data + stack->elementSize * stack->stackSize++, data, stack->elementSize);
 
     return error;
 }
 
 void* StackPop(Stack *stack, int *error)
 {
-#ifdef STACK_LOGS
-    LogLine(stackLogFile, "StackPop", DEBUG);
-#endif
+    LOG_STACK_DBG("StackPop");
 
-    int _error = ValidateStack(stack);
-
-    if (IsStackBroken(_error, stack))
-    {
-        if (error)
-            *error = _error;
-        return nullptr;
-    }
+    assert(stack);
+    //assert(error);
 
     if (stack->stackSize == 0)
     {
-#ifdef STACK_LOG_ERRORS
-        LogLine(stackLogFile, "ERROR: Stack is empty", ERROR);
-#endif
+        LOG_STACK_ERR("ѕопытка извлечь элемент из пустого стека.");
         if (error)
-            *error |= STACKERR_STACK_IS_EMPTY;
-        //StackDump(stack, stackLogFile);
+            *error |= STK_ERR_EMPTY;
         return nullptr;
     }
     
@@ -154,18 +88,13 @@ void* StackPop(Stack *stack, int *error)
 
     stack = StackResize(stack, error);
     
-    _error |= ValidateStack(stack);
-    if (error)
-        *error |= _error;
-
-    if (_error > 0)
-        StackDump(stack, stackLogFile);
-
     return (char*)stack->data + (stack->elementSize * stack->stackSize);
 }
 
-void* StackGetElemAt(Stack* stack, size_t index)
+void* StackGetElemAt(const Stack* stack, const size_t index)
 {
+    assert(stack);
+
     if (index > stack->stackSize)
         return nullptr;
     
@@ -174,24 +103,23 @@ void* StackGetElemAt(Stack* stack, size_t index)
 
 static Stack* StackResize(Stack *stack, int *error)
 {
-#ifdef STACK_LOGS
-    LogLine(stackLogFile, "StackResize", DEBUG);
-#endif
+    LOG_STACK_DBG("StackResize");
 
     assert(stack);
+    //assert(error);
 
-    size_t oldCapacity = stack->stackCapacity;
+    //size_t oldCapacity = stack->stackCapacity;
     bool shouldResize = false;
 
     if (stack->stackCapacity == 0)
     {
-        stack->stackCapacity = STACK_MIN_CAPACITY;
+        stack->stackCapacity = StackMinCapacity;
         shouldResize = true;
     }
     else if (stack->stackSize >= stack->stackCapacity)
     {
         if (stack->stackSize < stack->stackCapacity * 2)
-            stack->stackCapacity *= STACK_CAPACITY_SCALE_COEFFICIENT;
+            stack->stackCapacity *= StackCapacityScaleCoefficient;
         else
             stack->stackCapacity = stack->stackSize;
         shouldResize = true;
@@ -203,45 +131,30 @@ static Stack* StackResize(Stack *stack, int *error)
         
     if (shouldResize)
     {
-        char *dataPtr = nullptr;
-        
-        if (stack->data)
-            dataPtr = (char*)stack->data - sizeof(int64_t);
-
-        void *reallocResult = 
-            realloc(dataPtr, sizeof(int64_t) + stack->stackCapacity * stack->elementSize + sizeof(int64_t));
+        void *reallocResult = realloc(stack->data, stack->stackCapacity * stack->elementSize);
 
         if (reallocResult == nullptr)
         {
-#ifdef STACK_LOG_ERRORS
-            LogLine(stackLogFile, "ERROR: Stack no memory", ERROR);
-#endif
+            LOG_STACK_ERR_MEMORY;
             if (error)
-                *error |= STACKERR_NO_MEMORY;
-            StackDump(stack, stackLogFile);
+                *error |= STK_ERR_MEMORY;
             return nullptr;
         }
 
-        stack->data = (char*)reallocResult + sizeof(int64_t);
-        if (stack->stackCapacity > oldCapacity)
-            memset((char*)stack->data + oldCapacity * stack->elementSize, 0, (stack->stackCapacity - oldCapacity) * stack->elementSize);
-
-        ((int64_t*)( (char*)stack->data - sizeof(int64_t) ))[0] = STACK_LEFT_CANARY_VALUE;
-
-        ((int64_t*)( (char*)stack->data + stack->stackCapacity * stack->elementSize ))[0] = STACK_RIGHT_CANARY_VALUE;
+        stack->data = (char*)reallocResult;
     }
 
     return stack;
 }
 
-static size_t CalculateDecreasedCapacity(size_t oldCapacity, size_t stackSize, bool* shouldResize)
+static size_t CalculateDecreasedCapacity(const size_t oldCapacity, const size_t stackSize, bool* shouldResize)
 {
-    size_t proportionalCapacity = (oldCapacity * (0.5 - STACK_CAPACITY_DECREASE_COEFFICIENT)) > 0 ? 
-                                   (size_t)(oldCapacity * (0.5 - STACK_CAPACITY_DECREASE_COEFFICIENT)) : 0;
-    size_t deltaCapacity        = (oldCapacity / 2.0 - STACK_MIN_CAPACITY) > 0 ? (size_t)(oldCapacity / 2.0 - STACK_MIN_CAPACITY) : 0;
+    size_t proportionalCapacity = (oldCapacity * (0.5 - StackCapacityDecreaseCoefficient)) > 0 ? 
+                                   (size_t)(oldCapacity * (0.5 - StackCapacityDecreaseCoefficient)) : 0;
+    size_t deltaCapacity        = (oldCapacity / 2.0 - StackMinCapacity) > 0 ? (size_t)(oldCapacity / 2.0 - StackMinCapacity) : 0;
     size_t calculatedCapacity   = proportionalCapacity < deltaCapacity ? proportionalCapacity : deltaCapacity;
 
-    calculatedCapacity = calculatedCapacity < STACK_MIN_CAPACITY ? STACK_MIN_CAPACITY : calculatedCapacity;
+    calculatedCapacity = calculatedCapacity < StackMinCapacity ? StackMinCapacity : calculatedCapacity;
     if (calculatedCapacity > stackSize)
     {
         if (calculatedCapacity != oldCapacity)
@@ -250,4 +163,79 @@ static size_t CalculateDecreasedCapacity(size_t oldCapacity, size_t stackSize, b
     }
     else
         return oldCapacity;
+}
+
+///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
+///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
+//                               ‘ункции диагностики
+///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
+///***///***///---\\\***\\\***\\\___///***___***\\\___///***///***///---\\\***\\\***\\\
+
+void $StackDump__(Stack *stack, FILE *file,
+    const char *stack_variable_name,
+    const char *stack_function_name,
+    const char *stack_file,
+    const int   stack_line)
+{
+    LOG_STACK_DBG("StackDump");
+
+    assert(stack);
+    assert(file);
+
+    const size_t bufferSize = 1000;
+    char buffer[bufferSize] = "";
+
+    snprintf(buffer, bufferSize, "StackDump\nStack [0x%p]: \"%s\" called from % s() at |%s, %d|\n",
+        stack,
+        stack_variable_name,
+        stack_function_name, 
+        stack_file,
+        stack_line);
+
+    fputs(buffer, file);
+
+    fputs("Structure:\n{\n", file);
+
+    if (stack)
+    {
+        const int leftOffset1 = 4 - 1;// число пробелов, задающих отступ слева. 4 пробела
+        const int leftOffset2 = 8 - 1;// число пробелов, задающих отступ слева. 8 пробелов
+        
+        snprintf(buffer, bufferSize, 
+            "%*s elementSize   = %zd\n"
+            "%*s stackSize     = %zd\n"
+            "%*s stackCapacity = %zd\n\n    data [0x%p]:\n    {\n",
+            leftOffset1, "", stack->elementSize,
+            leftOffset1, "", stack->stackSize,
+            leftOffset1, "", stack->stackCapacity, stack->data);
+
+        fputs(buffer, file);
+        
+        if (stack->data)
+        {
+            size_t capacity = stack->stackCapacity;
+            size_t size     = stack->stackSize;
+            int    *data    = (int*)stack->data;
+
+            size_t numberLength = 0;
+            while (capacity > 0)
+            {
+                capacity /= 10;
+                numberLength++;
+            }
+            capacity = stack->stackCapacity;
+
+            for (size_t st = 0; st < capacity; st++)
+            {
+                snprintf(buffer, bufferSize, "%*s %c[%*.1d] = %d\n", leftOffset2, "", (st <= size) ? '*' : ' ', numberLength, st, data[st]);
+                fputs(buffer, file);
+            }
+        }
+
+        fputs("    }\n", file);
+    }
+
+    fputs("}\n", file);
+
+    fflush(file);
 }

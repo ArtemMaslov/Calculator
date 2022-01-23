@@ -4,16 +4,6 @@
 
 #include <stdint.h>
 
-//#define STACK_LOGS
-//#define STACK_LOG_ERRORS
-
-#ifdef  STACK_LOGS
-
-extern FILE* stackLogFile;
-#else
-#define stackLogFile nullptr
-#endif //  StackLogs
-
 /**
  * @brief Структура данных стек.
 */
@@ -31,16 +21,9 @@ struct Stack
 */
 const char StackErrorStrings[][40] =
 {
-    "No errors",
-    "Stack is null",
-    "Stack is empty",
-
-    "No memory",
-    "Size more capacity",
-
-    "Stack isn't inited",
-    "Stack element size invalide",
-    "Trying to push null value",
+    "Без ошибок.",
+    "Не хватает памяти.",
+    "Стек пустой."
 };
 
 /**
@@ -48,21 +31,14 @@ const char StackErrorStrings[][40] =
 */
 enum StackError
 {
-    STACKERR_NO_ERRORS           = 0 << 0,
-    STACKERR_PTR_IS_NULL         = 1 << 0,
-    STACKERR_STACK_IS_EMPTY      = 1 << 1,
-
-    STACKERR_NO_MEMORY           = 1 << 2,
-    STACKERR_SIZE_MORE_CAPACITY  = 1 << 3,
-
-    STACKERR_STACK_IS_NOT_INITED = 1 << 8,
-    STACKERR_ELEM_SIZE_INVALIDE  = 1 << 9,
-    STACKERR_NULL_VALUE          = 1 << 12,
+    STK_NO_ERRORS  = 0 << 0,
+    STK_ERR_MEMORY = 1 << 1,
+    STK_ERR_EMPTY  = 1 << 2,
 };
 
 /// @brief Минимальный допустимый размер стека.
 /// Стек может содержать массив данных либо нулевой длины, либо не меньшей STACK_MIN_CAPACITY.
-const size_t STACK_MIN_CAPACITY = 32;
+const size_t StackMinCapacity = 32;
 /// @brief Коэффициент расширения/сужения размера стека. Должен быть больше 1.
 /// При увеличении коэффициента, уменьшается количество выделений памяти.
 /// При уменьшении коэффициента, стек будет занимать меньше памяти.
@@ -71,15 +47,11 @@ const size_t STACK_MIN_CAPACITY = 32;
 /// newStackCapacity = min ( oldCapacity * (0.5 - STACK_CAPACITY_DECREASE_COEFFICIENT) ; abs(oldCapacity / 2.0 - STACK_MIN_CAPACITY) )
 /// При этом, если в стеке есть элементы, то вместимость стека не может стать меньше STACK_MIN_CAPACITY.
 /// Если stackSize == 0, то вместимость стека устанавливается равной 0.
-const size_t STACK_CAPACITY_SCALE_COEFFICIENT = 2;
+const size_t StackCapacityScaleCoefficient = 2;
 /// @brief Коэффициент уменьшения вместимости стека. Должен быть не меньше 0, не больше 0.5.
 /// При увеличении коэффициента, уменьшается количество выделений памяти.
 /// При уменьшении коэффициента, стек будет занимать меньше памяти.
-const double STACK_CAPACITY_DECREASE_COEFFICIENT = 0.1;
-/// @brief Значение левой канарейки для стека и массива данных.
-#define STACK_LEFT_CANARY_VALUE 0xBAD0AAAAAAAA0BAD
-/// @brief Значение правой канарейки для стека и массива данных.
-#define STACK_RIGHT_CANARY_VALUE 0xBADFBBBBBBBBFBAD
+const double StackCapacityDecreaseCoefficient = 0.1;
 
 /**
  * @brief             Конструктор стека.
@@ -88,14 +60,13 @@ const double STACK_CAPACITY_DECREASE_COEFFICIENT = 0.1;
  * @param Capacity    Начальная вместимость стека. По умолчанию 0. Если значение больше 0, то под данные будет выделена память.
  * @return            Код ошибки, 0 - в случае успешного завершения.
 */
-int   StackConstructor(Stack *stack, size_t elementSize, size_t Capacity = 0);
+int StackConstructor(Stack *stack, const size_t elementSize, const size_t Capacity = 0);
 
 /**
  * @brief       Деструктор стека.
  * @param stack Указатель на стек.
- * @return      Код ошибки, 0 - в случае успешного завершения.
 */
-int   StackDestructor(Stack *stack);
+void  StackDestructor(Stack *stack);
 
 /**
  * @brief       Добавляет элемент в конец стека.
@@ -120,7 +91,7 @@ void* StackPop(Stack *stack, int *error = nullptr);
 */
 int   ValidateStack(Stack *stack);
 
-void* StackGetElemAt(Stack* stack, size_t index);
+void* StackGetElemAt(const Stack* stack, const size_t index);
 
 //#define StackDump(stack, file, programm_function_name, programm_file, programm_line) \
 //StackDump_(stack, file, #stack, __FUNCTION__, __FILE__, __LINE__, programm_function_name, programm_file, programm_line);
@@ -131,34 +102,22 @@ void* StackGetElemAt(Stack* stack, size_t index);
  * @param file  Указатель на поток вывода
 */
 #define StackDump(stack, file) \
-StackDump_(stack, file, #stack, __FUNCTION__, __FILE__, __LINE__, "", "", -1);
+    $StackDump__(stack, file, #stack, __FUNCTION__, __FILE__, __LINE__);
 
 /**
  * @brief                        Внутренняя функция. Используйте StackDump взамен.
  * @param stack                  Указатель на стек.
  * @param file                   Указатель на поток вывода.
- * @param stack_variable_name    Имя переменной в библиотеке StackLibrary.
- * @param stack_function_name    Имя функции в библиотеке StackLibrary.
- * @param stack_file             Файл библиотеки StackLibrary.
- * @param stack_line             Номер строки кода в библиотеке StackLibrary.
- * @param programm_function_name Имя функции в программе, использующей StackLibrary.
- * @param programm_file          Имя файла в программе, использующей StackLibrary.
- * @param programm_line          Номер строки кода в программе, использующей StackLibrary.
+ * @param varName    Имя переменной в библиотеке StackLibrary.
+ * @param funcName    Имя функции в библиотеке StackLibrary.
+ * @param fileName             Файл библиотеки StackLibrary.
+ * @param codeLine             Номер строки кода в библиотеке StackLibrary.
 */
-void StackDump_(Stack *stack, FILE *file,
-    const char *stack_variable_name,
-    const char *stack_function_name,
-    const char *stack_file,
-    const int   stack_line,
-    const char *programm_function_name,
-    const char *programm_file,
-    const int   programm_line);
-
-/**
- * @brief      Конструктор файла логов стека.
- * @param file Указатель на поток вывода.
-*/
-void StackLogConstructor(FILE* file);
+void $StackDump__(Stack *stack, FILE *file,
+    const char *varName,
+    const char *funcName,
+    const char *fileName,
+    const int   codeLine);
 
 
 #endif

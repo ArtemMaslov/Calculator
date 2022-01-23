@@ -19,6 +19,12 @@ struct Text
     String* strings;
 };
 
+enum StringLibErr
+{
+    STR_NO_ERRORS  = 0,
+    STR_ERR_MEMORY = 1 << 0,
+};
+
 bool ReadFile(Text* text, FILE* file);
 
 void ParseFileToLines(Text* text);
